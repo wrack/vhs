@@ -12,9 +12,7 @@ use FluidTYPO3\Vhs\Asset;
 use FluidTYPO3\Vhs\Utility\CoreUtility;
 use FluidTYPO3\Vhs\ViewHelpers\Asset\AssetInterface;
 use Psr\Http\Message\ServerRequestInterface;
-use Psr\Log\LoggerInterface;
 use TYPO3\CMS\Core\Cache\CacheManager;
-use TYPO3\CMS\Core\Log\LogManager;
 use TYPO3\CMS\Core\Routing\PageArguments;
 use TYPO3\CMS\Core\Routing\RouteResultInterface;
 use TYPO3\CMS\Core\SingletonInterface;
@@ -27,6 +25,9 @@ use TYPO3\CMS\Fluid\View\StandaloneView;
 use TYPO3\CMS\Frontend\Cache\CacheInstruction;
 use TYPO3\CMS\Frontend\Controller\TypoScriptFrontendController;
 use TYPO3Fluid\Fluid\Core\ViewHelper\TagBuilder;
+use Psr\Log\LoggerAwareInterface;
+use Psr\Log\LoggerAwareTrait;
+use TYPO3\CMS\Core\Log\LogLevel;
 
 /**
  * Asset Handling Service
@@ -34,8 +35,10 @@ use TYPO3Fluid\Fluid\Core\ViewHelper\TagBuilder;
  * Inject this Service in your class to access VHS Asset
  * features - include assets etc.
  */
-class AssetService implements SingletonInterface
+class AssetService implements SingletonInterface, LoggerAwareInterface
 {
+    use LoggerAwareTrait;
+
     const ASSET_SIGNAL = 'writeAssetFile';
 
     /**
@@ -619,12 +622,7 @@ class AssetService implements SingletonInterface
         $replacements = [];
         $wrap = explode('|', $wrap);
         preg_match_all($regex, $contents, $matches);
-        $logger = null;
-        if (class_exists(LogManager::class)) {
-            /** @var LogManager $logManager */
-            $logManager = GeneralUtility::makeInstance(LogManager::class);
-            $logger = $logManager->getLogger(__CLASS__);
-        }
+        
         foreach ($matches[2] as $matchCount => $match) {
             $match = trim($match, '\'" ');
             if (false === strpos($match, ':') && !preg_match('/url\\s*\\(/i', $match)) {
@@ -646,11 +644,7 @@ class AssetService implements SingletonInterface
                 $realPath = realpath($rawPath);
                 if (false === $realPath) {
                     $message = 'Asset at path "' . $rawPath . '" not found. Processing skipped.';
-                    if ($logger instanceof LoggerInterface) {
-                        $logger->warning($message, ['rawPath' => $rawPath]);
-                    } else {
-                        GeneralUtility::sysLog($message, 'vhs', GeneralUtility::SYSLOG_SEVERITY_WARNING);
-                    }
+                    $this->logger->log(LogLevel::WARNING , $message, ['vhs']);
                 } else {
                     if (!file_exists($temporaryFile)) {
                         copy($realPath, $temporaryFile);
