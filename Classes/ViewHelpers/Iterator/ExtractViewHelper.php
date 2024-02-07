@@ -9,10 +9,12 @@ namespace FluidTYPO3\Vhs\ViewHelpers\Iterator;
  */
 
 use TYPO3\CMS\Core\Log\LogManager;
+use TYPO3\CMS\Core\Log\Logger;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 use TYPO3\CMS\Extbase\Reflection\ObjectAccess;
 use TYPO3Fluid\Fluid\Core\Rendering\RenderingContextInterface;
 use TYPO3Fluid\Fluid\Core\ViewHelper\AbstractViewHelper;
+use TYPO3\CMS\Core\Log\LogLevel;
 
 /**
  * ### Iterator / Extract VieWHelper
@@ -157,13 +159,9 @@ class ExtractViewHelper extends AbstractViewHelper
                 $result = static::extractByKey($content, $key);
             }
         } catch (\Exception $error) {
-            if (class_exists(LogManager::class)) {
-                /** @var LogManager $logManager */
-                $logManager = GeneralUtility::makeInstance(LogManager::class);
-                $logManager->getLogger(__CLASS__)->warning($error->getMessage(), ['content' => $content]);
-            } else {
-                GeneralUtility::sysLog($error->getMessage(), 'vhs', GeneralUtility::SYSLOG_SEVERITY_WARNING);
-            }
+            /** @var Logger */
+            $logger = GeneralUtility::makeInstance(LogManager::class)->getLogger(__CLASS__);
+            $logger->log(LogLevel::WARNING, $error->getMessage(), ['content' => $content]);
             $result = [];
         }
 
